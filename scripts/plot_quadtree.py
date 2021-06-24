@@ -17,13 +17,11 @@ class QTree:
         self.xy_max = ( center[0] + half_scale,
                         center[1] + half_scale )
 
-    def plot(self, ax, r_args={}):
+    def plot(self, ax, r_args={}, show_id=False):
         r = Rectangle(self.xy_min, self.scale, self.scale, **r_args)
         ax.add_patch( r )
-        ax.text(self.center[0], self.center[1], self.index)
-        xy_min, xy_max = self.xy_min, self.xy_max
-        ax.scatter((xy_min[0],xy_max[0]), (xy_min[1], xy_max[1]),
-                   s=10, c='k', marker='s')
+        if show_id:
+            ax.text(self.center[0], self.center[1], self.index)
 
 
 def clear_comments(lines):

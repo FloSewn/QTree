@@ -158,7 +158,7 @@ public:
     if ( items_.size() > max_item_ )
     {
       if ( depth_ < max_depth_ ) return split_qtree();
-      else throw std::runtime_error("QTree overflow");
+      //else throw std::runtime_error("QTree overflow");
     }
 
     return true;
@@ -219,7 +219,7 @@ private:
   /*-------------------------------------------------------- 
   | Merge QTree children
   --------------------------------------------------------*/
-  bool merge()
+  void merge()
   {
     for ( auto child : children_ )
     {
@@ -341,9 +341,9 @@ private:
   /*--------------------------------------------------------
   | Attributes
   --------------------------------------------------------*/
-  List       items_;
-  Array      children_  { nullptr };
-  QTree<T>*  parent_    { nullptr };
+  Vec2d      center_   { 0.0, 0.0 };
+  Vec2d      lowleft_  { 0.0, 0.0 };
+  Vec2d      upright_  { 0.0, 0.0 };
 
   double     scale_     { 0.0 };
   double     halfscale_ { 0.0 };
@@ -354,9 +354,11 @@ private:
   int        depth_     { 0 };
   int        n_items_   { 0 };
 
-  Vec2d      center_    { 0.0, 0.0 };
-  Vec2d      lowleft_  { 0.0, 0.0 };
-  Vec2d      upright_  { 0.0, 0.0 };
+  List       items_;
+  Array      children_  { nullptr };
+  QTree<T>*  parent_    { nullptr };
+
+
 
 }; // QTree
 

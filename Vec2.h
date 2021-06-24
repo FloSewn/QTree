@@ -23,12 +23,12 @@ public:
   // Copy 
   Vec2(const Vec2<T>& v) : e{ v.x,v.y } {}
   Vec2<T>& operator=(const Vec2<T>& v) 
-  { x=v.x; y=v.y; }
+  { x=v.x; y=v.y; return *this; }
 
   // Move
   Vec2(Vec2<T>&& v) : e{v.x,v.y} {}
   Vec2<T>& operator=(Vec2<T>&& v) 
-  { x=v.x; y=v.y; }
+  { x=v.x; y=v.y; return *this; }
 
   // Vector access
   T operator[](int i) const 

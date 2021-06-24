@@ -1,11 +1,9 @@
 #include <iostream>
-#include <list>
-#include <memory>
 #include <vector>
 #include <cassert>
 #include <iomanip>   
-
-#include <raylib.h>
+#include <cmath>
+#include <chrono>
 
 #include "SimplexContainer.h"
 #include "Vertex.h"
@@ -15,38 +13,167 @@
 #include "QTree.h"
 
 
+double benchmark(int n, int r)
+{
+  using Clock = std::chrono::high_resolution_clock;
+  using Second = std::chrono::duration<double, std::ratio<1> >;
+  using Timepoint = std::chrono::time_point<Clock>;
+
+  SimplexContainer vertices {};
+  QTree<Vertex> qtree { {0.0, 0.0}, 150.0, 32, 8 };
+
+  constexpr double a  =  2.5;
+  constexpr double b  = -3.4;
+  constexpr double c  =  6.5;
+  constexpr double t0 =  0.0;
+  constexpr double t1 =  5.0 * M_PI;
+  const double dt = (t1-t0) / static_cast<double>(n);
+
+  Timepoint time_0 = Clock::now();
+
+  /*--------------------------------------------------------
+  | Create nodes
+  --------------------------------------------------------*/
+  for (int i = 0; i < n; i++)
+  {
+    const double t = t0 + i*dt;
+    const double x = (a + b * t) * cos(t) + c * sin(40.*t);
+    const double y = (a + b * t) * sin(t) + c * cos(40.*t);
+
+    vertices.add( std::make_unique<Vertex>( x, y) );
+  }
+
+  // -------------------- Timing ---------------------------
+  Timepoint time_1 = Clock::now();
+  // -------------------------------------------------------
+
+  /*--------------------------------------------------------
+  | Add nodes to qtree
+  --------------------------------------------------------*/
+  for ( const auto& v_ptr : vertices )
+    qtree.add( reinterpret_cast<Vertex*>( v_ptr.get() ) );
+
+  // -------------------- Timing ---------------------------
+  Timepoint time_2 = Clock::now();
+  // -------------------------------------------------------
+
+  /*--------------------------------------------------------
+  | Find objects within rectangle using qtree
+  --------------------------------------------------------*/
+  int item_count_qt = 0;
+
+  for (int i = 0; i < n; i++)
+  {
+    const double t = t0 + i*dt;
+    const double x = (a + b * t) * cos(t) + c * sin(40.*t);
+    const double y = (a + b * t) * sin(t) + c * cos(40.*t);
+
+    std::vector<Vertex*> items;
+    qtree.get_items( {x-5.0, y-5.0}, {x+5.0,y+5.0}, items );
+
+    item_count_qt += items.size();
+  }
+
+  // -------------------- Timing ---------------------------
+  Timepoint time_3 = Clock::now();
+  // -------------------------------------------------------
+
+  /*--------------------------------------------------------
+  | Find objects within rectangle using brute force
+  --------------------------------------------------------*/
+  int item_count_bf = 0;
+
+  for (int i = 0; i < n; i++)
+  {
+    const double t = t0 + i*dt;
+    const double x = (a + b * t) * cos(t) + c * sin(40.*t);
+    const double y = (a + b * t) * sin(t) + c * cos(40.*t);
+
+    for ( const auto& v_ptr : vertices )
+    {
+      const auto& v = *v_ptr;
+      Vec2d xy = v.xy();
+
+      bool in_rect = Vec2Geom::in_on_rect(
+          xy, {x-5.0,y-5.0}, {x+5.0,y+5.0} );
+
+      if ( in_rect )
+        ++item_count_bf;
+    }
+  }
+
+  // -------------------- Timing ---------------------------
+  Timepoint time_4 = Clock::now();
+  // -------------------------------------------------------
+
+  /*--------------------------------------------------------
+  | Assert that qtree found all items
+  --------------------------------------------------------*/
+  assert( item_count_qt == item_count_bf );
+
+  /*--------------------------------------------------------
+  | Randomly remove r vertices 
+  --------------------------------------------------------*/
+
+
+  /*--------------------------------------------------------
+  | User output
+  --------------------------------------------------------*/
+  double delta_1 = std::chrono::duration_cast<Second>(
+      time_1 - time_0).count();
+  double delta_2 = std::chrono::duration_cast<Second>(
+      time_2 - time_1).count();
+  double delta_3 = std::chrono::duration_cast<Second>(
+      time_3 - time_2).count();
+  double delta_4 = std::chrono::duration_cast<Second>(
+      time_4 - time_3).count();
+
+  std::cout << "----------------------------------\n";
+  std::cout << "Benchmark n=" << n << " r=" << r << "\n";
+  std::cout << "SimplexContainer initialization  : " 
+            << delta_1 << "s \n";
+  std::cout << "QTree initialization             : " 
+            << delta_2 << "s \n";
+  std::cout << "QTree search                     : " 
+            << delta_3 << "s \n";
+  std::cout << "BruteForce search                : " 
+            << delta_4 << "s \n";
+  std::cout << "QTree speedup                    : "
+            << delta_4 / delta_3 << "\n";
+
+
+  /*
+  // Print out vertices
+  std::cout << "VERTICES " << vertices.size() << "\n";
+  for ( const auto& v_ptr : vertices )
+  {
+    const auto& v = *v_ptr;
+
+    std::cout << std::setprecision(5) << std::fixed
+      << v.xy().x << "," << v.xy().y << "\n";
+  }
+
+  // Print out qtree
+  std::cout << "QTREE " << qtree.n_leafs() << "\n";
+  std::cout << qtree;
+  */
+
+
+
+  return 0.0;
+  
+} /* benchmark() */
+
+
 /***********************************************************
 * The main function
 ***********************************************************/
 int main()
 {
 
-  /*
-  auto e1 = list.add( std::make_unique<Edge>( v1, v2 ) );
-  auto e2 = list.add( std::make_unique<Edge>( v2, v3 ) );
-  auto e3 = list.add( std::make_unique<Edge>( v3, v4 ) );
-  auto e4 = list.add( std::make_unique<Edge>( v4, v1 ) );
-
-  auto t1 = list.add( std::make_unique<Triangle>( v1,v2,v3 ));
-  auto t2 = list.add( std::make_unique<Triangle>( v2,v3,v4 ));
-
-  auto q1 = list.add( std::make_unique<Quad>( v1,v2,v3,v4 ) );
-
-  list.remove( e1 );
-  list.remove( t2 );
-  */
-
-  /*
-  for (const auto& s_ptr : list)
-  {
-    const auto& s = *s_ptr;
-    std::cout << s << "\n";
-  }
-  */
-
   /*********************************************************
   * QTree
-  *********************************************************/
+  *********************************************************
   QTree<Vertex> qtree { {6.0, 6.0}, 12.0, 2, 4 };
 
   SimplexContainer vertices {};
@@ -125,6 +252,17 @@ int main()
   // Merge
   qtree.remove( v9 );
   assert( qtree.children()[2]->split() == false );
+  */
+  benchmark(100, 0);
+
+  benchmark(340, 0);
+
+  benchmark(1000, 0);
+
+  benchmark(10000, 0);
+
+  //benchmark(100000, 0);
+
 
   return EXIT_SUCCESS;
 
