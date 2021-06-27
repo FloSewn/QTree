@@ -146,7 +146,14 @@ public:
       return false;
 
     // If quad is splitted, pass item to children
-    if ( split_ ) return pass_children( item );
+    if ( split_ ) 
+    {
+      if ( pass_children( item ) )
+        return true;
+      else
+        throw std::runtime_error(
+            "Failed to add item to QTree.");
+    }
 
     // Add item to this quad
     items_.push_back( item );
@@ -157,8 +164,15 @@ public:
     // Split this quad if maxmium item number is reached
     if ( items_.size() > max_item_ )
     {
-      if ( depth_ < max_depth_ ) return split_qtree();
-      //else throw std::runtime_error("QTree overflow");
+      if ( depth_ < max_depth_ ) 
+      {
+        if ( split_qtree() )
+          return true;
+        else 
+          throw std::runtime_error(
+              "Failed to distribute items "
+              "among QTree children.");
+      }
     }
 
     return true;
@@ -184,7 +198,9 @@ public:
 
       if ( removed )
         if ( n_items_ <= max_item_ )
-          merge();
+          if ( !merge() )
+            throw std::runtime_error(
+                "Failed to merge QTree structure.");
     }
     else
     {
@@ -219,17 +235,11 @@ private:
   /*-------------------------------------------------------- 
   | Merge QTree children
   --------------------------------------------------------*/
-  void merge()
+  bool merge()
   {
     for ( auto child : children_ )
-    {
-      if ( !child )
-        throw std::runtime_error(
-            "Quad containes empty children.");
-      if ( child->split() )
-        throw std::runtime_error(
-            "Can not merge split child quads.");
-    }
+      if ( !child || child->split() )
+        return false;
 
     for ( auto child : children_ )
       if ( child )
@@ -244,6 +254,8 @@ private:
 
     split_ = false;
 
+    return true;
+
   } /* merge() */
 
   /*-------------------------------------------------------- 
@@ -256,10 +268,6 @@ private:
     for (auto child : children_)
       if ( child && ( passed = child->add( item ) ) )
         return true;
-
-    if (!passed)
-      throw std::runtime_error(
-          "Failed to add item to QTree.");
 
     return false;
   }
@@ -296,14 +304,14 @@ private:
     { c3, halfscale_, max_item_, max_depth_, ch_depth, this};
 
     // Distribute items among children
-    distribute_items();
+    if ( !distribute_items() )
+      return false;
 
     split_ = true;
 
     // Check that quad is empty
     if ( items_.size() > 0 )
-      throw std::runtime_error(
-          "Failed to distribute items among QTree children.");
+      return false;
 
     return true;
     
@@ -312,7 +320,7 @@ private:
   /*-------------------------------------------------------- 
   | Distribute items to children qtrees
   --------------------------------------------------------*/
-  void distribute_items()
+  bool distribute_items()
   {
     while ( items_.size() > 0 )
     {
@@ -330,11 +338,12 @@ private:
       }
 
       if (!passed)
-        throw std::runtime_error(
-          "Failed to distribute items among QTree children.");
+        return false;
 
       items_.pop_back();
     }
+
+    return true;
 
   } /* distribute_items() */
 

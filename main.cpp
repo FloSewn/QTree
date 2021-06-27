@@ -138,7 +138,7 @@ double benchmark(int n, int r)
 
 
   // Randomly remove r vertices 
-  std::srand(0);
+  std::srand(123);
 
   for (int i = 0; i < r; i++)
   {
